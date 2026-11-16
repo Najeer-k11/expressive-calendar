@@ -117,6 +117,15 @@ app/src/main/java/app/expressivecalendar/
 > [!NOTE]
 > The project uses the **alpha** Compose BOM on purpose. Stable Material 3 ships the expressive theming but not the expressive components, and mixing an alpha `material3` with the stable BOM pulls in mismatched Compose versions. See `gradle/libs.versions.toml` for details.
 
+## 🙏 Credits
+
+- **[Rayane Bouafia](LICENSE)**, for the original *Expressive Clock* design system and theming this app is built on
+- **Google**, for [Material 3 Expressive](https://m3.material.io/) and the [Google Sans Flex](https://fonts.google.com/specimen/Google+Sans+Flex) typeface (SIL OFL 1.1)
+- **[Nager.Date](https://date.nager.at)** by Tino Hager, for the free public holiday API
+- **The Android Open Source Project** and **JetBrains**, for Jetpack Compose, AndroidX and Kotlin
+
+See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for full attributions.
+
 ## 📜 License
 
 Released under the [MIT License](LICENSE).
