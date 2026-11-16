@@ -17,6 +17,27 @@ Soft morphing shapes, frosted glass, variable type, and your events from the cal
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/month.webp" width="220" alt="Month view"/><br/><sub><b>Month</b></sub></td>
+    <td align="center"><img src="docs/screenshots/agenda.webp" width="220" alt="Agenda view"/><br/><sub><b>Agenda</b></sub></td>
+    <td align="center"><img src="docs/screenshots/day.webp" width="220" alt="Day view"/><br/><sub><b>Day</b></sub></td>
+    <td align="center"><img src="docs/screenshots/editor.webp" width="220" alt="New event sheet"/><br/><sub><b>New event</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/settings.webp" width="220" alt="Settings"/><br/><sub><b>Settings</b></sub></td>
+    <td align="center"><img src="docs/screenshots/month-coral.webp" width="220" alt="Coral colour theme"/><br/><sub><b>Coral theme</b></sub></td>
+    <td align="center"><img src="docs/screenshots/month-dark.webp" width="220" alt="Month view in dark mode"/><br/><sub><b>Dark mode</b></sub></td>
+    <td align="center"><img src="docs/screenshots/day-dark.webp" width="220" alt="Day view in dark mode"/><br/><sub><b>Day, dark</b></sub></td>
+  </tr>
+</table>
+
+</div>
+
 ## ✨ Highlights
 
 | | |
