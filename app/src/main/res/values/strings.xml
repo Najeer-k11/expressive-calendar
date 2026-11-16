@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Calendar</string>
+    <string name="widget_label">Expressive month</string>
+    <string name="widget_description">This month at a glance, with holidays and events</string>
+</resources>
