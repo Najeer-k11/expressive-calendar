@@ -41,7 +41,8 @@ android {
 
     buildTypes {
         release {
-            if (hasReleaseKey) signingConfig = signingConfigs.getByName("release")
+            // Without a release key (e.g. CI), fall back to the debug key so the APK is still installable.
+            signingConfig = signingConfigs.getByName(if (hasReleaseKey) "release" else "debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
