@@ -86,7 +86,7 @@ cd expressive-calendar
 ./gradlew installDebug
 ```
 
-The debug build installs as `app.expressivecalendar.debug`, so it can sit next to a release build.
+The debug build installs as `com.ndev.expressive.calendar.debug`, so it can sit next to a release build.
 
 ### Release build
 

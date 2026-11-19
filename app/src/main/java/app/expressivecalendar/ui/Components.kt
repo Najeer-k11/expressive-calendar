@@ -29,7 +29,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -149,31 +148,6 @@ fun SheetHeaderButton(
 }
 
 @Composable
-fun SettingsCard(title: String?, content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(
-                if (MaterialTheme.colorScheme.surface.luminanceIsDark()) MaterialTheme.colorScheme.surfaceContainer
-                else MaterialTheme.colorScheme.surfaceContainerLow,
-            )
-            .padding(top = if (title != null) 18.dp else 8.dp, bottom = 8.dp),
-    ) {
-        if (title != null) {
-            Text(
-                title.uppercase(),
-                style = MaterialTheme.typography.labelLargeEmphasized,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-            )
-            Spacer(Modifier.height(4.dp))
-        }
-        content()
-    }
-}
-
-@Composable
 fun SettingIcon(icon: ImageVector, tint: Color? = null) {
     val dark = MaterialTheme.colorScheme.surface.luminanceIsDark()
     Box(
@@ -198,85 +172,6 @@ fun SettingIcon(icon: ImageVector, tint: Color? = null) {
             modifier = Modifier.size(23.dp),
         )
     }
-}
-
-@Composable
-fun SettingsNavigateRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    trailing: String? = null,
-    iconTint: Color? = null,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .elasticClickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingIcon(icon, iconTint)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        if (trailing != null) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .padding(horizontal = 14.dp, vertical = 9.dp),
-            ) {
-                Text(trailing, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-        } else {
-            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-fun SettingsSwitchRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String?,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .elasticClickable(onClick = { onCheckedChange(!checked) })
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingIcon(icon)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
-@Composable
-fun SettingsDivider() {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = 76.dp, end = 20.dp)
-            .height(1.dp)
-            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
-    )
 }
 
 @Composable
