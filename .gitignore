@@ -11,3 +11,6 @@
 keystore.properties
 *.jks
 .kotlin
+
+# Play Store publishing kit (listing assets, policy drafts, signing backup)
+/play-store/
