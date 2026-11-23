@@ -87,7 +87,7 @@ class SettingsStore(private val context: Context) {
         val view = stringPreferencesKey("default_view")
         val reminder = intPreferencesKey("default_reminder")
         val showHolidays = booleanPreferencesKey("show_holidays")
-        /** Pre-0.1.2 single-country setting; read once as a fallback, then replaced. */
+        /** Pre-0.2.0 single-country setting; read once as a fallback, then replaced. */
         val legacyCountry = stringPreferencesKey("holiday_country")
         val countries = stringSetPreferencesKey("holiday_countries")
         val hidden = stringSetPreferencesKey("hidden_calendars")

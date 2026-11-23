@@ -14,8 +14,8 @@ android {
         applicationId = "com.ndev.expressive.calendar"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.2.0"
     }
 
     // Release signing reads root-level `keystore.properties` (git-ignored):
