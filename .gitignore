@@ -14,3 +14,16 @@ keystore.properties
 
 # Play Store publishing kit (listing assets, policy drafts, signing backup)
 /play-store/
+
+# AI assistant files
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+AGENTS.md
+GEMINI.md
+.gemini/
+.cursor/
+.cursorrules
+.windsurfrules
+.aider*
+.github/copilot-instructions.md
