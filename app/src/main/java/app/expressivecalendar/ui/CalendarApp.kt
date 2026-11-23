@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -137,7 +138,8 @@ private fun MainShell(vm: CalendarViewModel) {
     val month by vm.visibleMonth.collectAsStateWithLifecycle()
     val selected by vm.selectedDate.collectAsStateWithLifecycle()
     val holidayStatus by vm.holidayStatus.collectAsStateWithLifecycle()
-    val countryName = remember(settings.effectiveCountry) { vm.holidaysRepo.countryName(settings.effectiveCountry) }
+    val notificationsAllowed by vm.notificationsAllowed.collectAsStateWithLifecycle()
+    val pendingOpen by vm.pendingOpen.collectAsStateWithLifecycle()
 
     var tab by rememberSaveable { mutableStateOf(Tab.of(settings.defaultView)) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -146,6 +148,57 @@ private fun MainShell(vm: CalendarViewModel) {
     var editing by remember { mutableStateOf<EventDraft?>(null) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Reminder notifications need POST_NOTIFICATIONS on Android 13+. Ask once at startup when
+    // they're on; from the settings toggle, fall back to system settings if the prompt is blocked.
+    val context = LocalContext.current
+    var notifAskedFromSettings by remember { mutableStateOf(false) }
+    val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        vm.onPermissionResult()
+        val activity = context as? Activity
+        if (!granted && notifAskedFromSettings && activity != null &&
+            !activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+        ) {
+            context.startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+            )
+        }
+        notifAskedFromSettings = false
+    }
+    fun requestNotifications(fromSettings: Boolean) {
+        if (Build.VERSION.SDK_INT >= 33 && !vm.notificationsAllowed.value &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notifAskedFromSettings = fromSettings
+            notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (fromSettings && !vm.notificationsAllowed.value) {
+            // Permission granted but notifications switched off for the app in system settings.
+            context.startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+            )
+        }
+    }
+    var notifAskedAtStart by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!notifAskedAtStart && vm.notificationsEnabled(settings)) {
+            notifAskedAtStart = true
+            requestNotifications(fromSettings = false)
+        }
+    }
+
+    // Tapping a reminder notification opens that occurrence once it has loaded.
+    LaunchedEffect(pendingOpen, events) {
+        val (id, begin) = pendingOpen ?: return@LaunchedEffect
+        val match = events.values.asSequence().flatten().firstOrNull { it.eventId == id && it.beginMillis == begin }
+            ?: events.values.asSequence().flatten().firstOrNull { it.eventId == id }
+        if (match != null) {
+            showSettings = false
+            holidayDetail = null
+            editing = null
+            detail = match
+            vm.consumePendingOpen()
+        }
+    }
 
     BackHandler(enabled = showSettings) { showSettings = false }
     BackHandler(enabled = !showSettings && tab != Tab.of(settings.defaultView)) { tab = Tab.of(settings.defaultView) }
@@ -170,10 +223,19 @@ private fun MainShell(vm: CalendarViewModel) {
                 settings = settings,
                 calendars = calendars,
                 countries = vm.countries,
-                countryName = countryName,
                 holidayStatus = holidayStatus,
+                notificationsOn = vm.notificationsEnabled(settings) && notificationsAllowed,
+                otherReminderApp = vm.otherReminderApp,
+                onNotificationsChange = { on ->
+                    vm.updateSettings { it.copy(eventNotifications = on) }
+                    if (on) requestNotifications(fromSettings = true)
+                },
                 onChange = vm::updateSettings,
                 onRefreshHolidays = vm::refreshHolidays,
+                onExport = vm::exportIcs,
+                onReadIcs = vm::readIcs,
+                onImport = vm::importIcs,
+                onCreateLocalCalendar = vm::createLocalCalendar,
                 onBack = { showSettings = false },
             )
             return@AnimatedContent
@@ -208,7 +270,6 @@ private fun MainShell(vm: CalendarViewModel) {
                             showWeekNumbers = settings.showWeekNumbers,
                             events = events,
                             holidays = holidays,
-                            countryName = countryName,
                             onShowMonth = vm::showMonth,
                             onSelect = vm::select,
                             onOpenDay = { vm.select(it); tab = Tab.DAY },
@@ -220,7 +281,6 @@ private fun MainShell(vm: CalendarViewModel) {
                         Tab.AGENDA -> AgendaScreen(
                             events = events,
                             holidays = holidays,
-                            countryName = countryName,
                             onDayClick = { vm.select(it); tab = Tab.DAY },
                             onEventClick = { detail = it },
                             onHolidayClick = { holidayDetail = it },
@@ -287,7 +347,7 @@ private fun MainShell(vm: CalendarViewModel) {
             },
         )
     }
-    holidayDetail?.let { h -> HolidayDetailSheet(h, countryName) { holidayDetail = null } }
+    holidayDetail?.let { h -> HolidayDetailSheet(h) { holidayDetail = null } }
     editing?.let { draft ->
         EventEditorSheet(
             initial = draft,

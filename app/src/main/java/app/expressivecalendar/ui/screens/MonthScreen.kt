@@ -88,7 +88,6 @@ fun MonthScreen(
     showWeekNumbers: Boolean,
     events: Map<LocalDate, List<EventInstance>>,
     holidays: Map<LocalDate, List<Holiday>>,
-    countryName: String,
     onShowMonth: (YearMonth) -> Unit,
     onSelect: (LocalDate) -> Unit,
     onOpenDay: (LocalDate) -> Unit,
@@ -182,7 +181,7 @@ fun MonthScreen(
             }
         }
         items(dayHolidays, key = { "h_${it.date}_${it.name}" }) { h ->
-            HolidayTile(h, countryName, onClick = { onHolidayClick(h) }, modifier = Modifier.animateItem())
+            HolidayTile(h, onClick = { onHolidayClick(h) }, modifier = Modifier.animateItem())
         }
         items(dayEvents, key = { "e_${it.eventId}_${it.beginMillis}" }) { e ->
             EventTile(e, selected, onClick = { onEventClick(e) }, modifier = Modifier.animateItem())

@@ -1,14 +1,22 @@
 package app.expressivecalendar.ui.screens
 
+import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -53,7 +61,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -65,6 +72,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,8 +95,12 @@ import app.expressivecalendar.data.CalendarView
 import app.expressivecalendar.data.Country
 import app.expressivecalendar.data.DarkMode
 import app.expressivecalendar.data.DeviceCalendar
+import app.expressivecalendar.data.IcsEvent
+import app.expressivecalendar.data.ImportResult
 import app.expressivecalendar.data.REMINDER_CHOICES
 import app.expressivecalendar.data.WeekStart
+import app.expressivecalendar.data.countryName
+import app.expressivecalendar.data.flagEmoji
 import app.expressivecalendar.data.reminderLabel
 import app.expressivecalendar.ui.ChoicePickerDialog
 import app.expressivecalendar.ui.elasticClickable
@@ -98,7 +110,7 @@ import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
 
-private enum class SettingsPicker { REMINDER, COUNTRY, CALENDARS, ABOUT }
+private enum class SettingsPicker { REMINDER, CALENDARS, ABOUT }
 
 /**
  * Settings, laid out around a live preview: the mini month at the top re-renders with the chosen
@@ -109,10 +121,73 @@ fun SettingsScreen(
     settings: CalendarSettings,
     calendars: List<DeviceCalendar>,
     countries: List<Country>,
-    countryName: String,
     holidayStatus: String?,
+    notificationsOn: Boolean,
+    otherReminderApp: String?,
+    onNotificationsChange: (Boolean) -> Unit,
     onChange: ((CalendarSettings) -> CalendarSettings) -> Unit,
     onRefreshHolidays: () -> Unit,
+    onExport: suspend (Set<Long>, Uri) -> Result<Int>,
+    onReadIcs: suspend (Uri) -> Result<List<IcsEvent>>,
+    onImport: suspend (List<IcsEvent>, Long) -> Result<ImportResult>,
+    onCreateLocalCalendar: () -> Unit,
+    onBack: () -> Unit,
+) {
+    var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
+    BackHandler(enabled = page != SettingsPage.HOME) { page = SettingsPage.HOME }
+    AnimatedContent(
+        targetState = page,
+        transitionSpec = {
+            if (targetState != SettingsPage.HOME) {
+                slideInHorizontally(tween(420, easing = FastOutSlowInEasing)) { it } togetherWith
+                    slideOutHorizontally(tween(420, easing = FastOutSlowInEasing)) { -it / 8 } + fadeOut(tween(300))
+            } else {
+                slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { -it / 8 } + fadeIn(tween(200)) togetherWith
+                    slideOutHorizontally(tween(320, easing = FastOutSlowInEasing)) { it }
+            }
+        },
+        label = "settingsPage",
+    ) { current ->
+        when (current) {
+            SettingsPage.COUNTRIES -> HolidayCountriesScreen(
+                countries = countries,
+                selected = settings.holidayCountries,
+                onChange = { codes -> onChange { it.copy(holidayCountries = codes) } },
+                onBack = { page = SettingsPage.HOME },
+            )
+            SettingsPage.BACKUP -> BackupScreen(
+                calendars = calendars,
+                onExport = onExport,
+                onRead = onReadIcs,
+                onImport = onImport,
+                onCreateLocalCalendar = onCreateLocalCalendar,
+                onBack = { page = SettingsPage.HOME },
+            )
+            SettingsPage.HOME -> SettingsHome(
+                settings, calendars, holidayStatus, notificationsOn, otherReminderApp,
+                onNotificationsChange, onChange, onRefreshHolidays,
+                onOpenCountries = { page = SettingsPage.COUNTRIES },
+                onOpenBackup = { page = SettingsPage.BACKUP },
+                onBack = onBack,
+            )
+        }
+    }
+}
+
+private enum class SettingsPage { HOME, COUNTRIES, BACKUP }
+
+@Composable
+private fun SettingsHome(
+    settings: CalendarSettings,
+    calendars: List<DeviceCalendar>,
+    holidayStatus: String?,
+    notificationsOn: Boolean,
+    otherReminderApp: String?,
+    onNotificationsChange: (Boolean) -> Unit,
+    onChange: ((CalendarSettings) -> CalendarSettings) -> Unit,
+    onRefreshHolidays: () -> Unit,
+    onOpenCountries: () -> Unit,
+    onOpenBackup: () -> Unit,
     onBack: () -> Unit,
 ) {
     var picker by remember { mutableStateOf<SettingsPicker?>(null) }
@@ -183,13 +258,27 @@ fun SettingsScreen(
                 onChange { it.copy(showWeekNumbers = v) }
             }
             ValueLine("Default reminder", reminderLabel(settings.defaultReminderMinutes)) { picker = SettingsPicker.REMINDER }
+            ToggleLine(
+                "Reminder notifications",
+                when {
+                    notificationsOn -> "Alert me when a reminder is due"
+                    settings.eventNotifications ?: (otherReminderApp == null) ->
+                        "Notifications are blocked · tap to allow"
+                    otherReminderApp != null -> "Off · another app ($otherReminderApp) shows them"
+                    else -> "Reminders are saved but won't alert"
+                },
+                notificationsOn,
+                onNotificationsChange,
+            )
             val shown = calendars.count { it.id !in settings.hiddenCalendarIds }
             ValueLine("Calendars", "$shown of ${calendars.size}") { picker = SettingsPicker.CALENDARS }
 
             Section("Holidays")
             ToggleLine(
                 "Public holidays",
-                "${flag(settings.effectiveCountry)}  $countryName" + if (settings.holidayCountry == null) " · automatic" else "",
+                settings.effectiveCountries.joinToString("  ") { flagEmoji(it) } + "  " +
+                    settings.effectiveCountries.joinToString { countryName(it) } +
+                    if (settings.holidayCountries.isEmpty()) " · automatic" else "",
                 settings.showHolidays,
             ) { v -> onChange { it.copy(showHolidays = v) } }
             AnimatedVisibility(
@@ -198,7 +287,12 @@ fun SettingsScreen(
                 exit = shrinkVertically() + fadeOut(),
             ) {
                 Column {
-                    ValueLine("Country", countryName) { picker = SettingsPicker.COUNTRY }
+                    ValueLine(
+                        if (settings.effectiveCountries.size > 1) "Countries" else "Country",
+                        settings.effectiveCountries.singleOrNull()?.let { countryName(it) }
+                            ?: "${settings.effectiveCountries.size} countries",
+                        onClick = onOpenCountries,
+                    )
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -220,6 +314,9 @@ fun SettingsScreen(
                 }
             }
 
+            Section("Backup")
+            ValueLine("Import & export", ".ics file", onClick = onOpenBackup)
+
             Spacer(Modifier.height(28.dp))
             Text(
                 "Expressive Calendar ${BuildConfig.VERSION_NAME}  ·  About & credits",
@@ -240,9 +337,6 @@ fun SettingsScreen(
     when (picker) {
         SettingsPicker.REMINDER -> ChoicePickerDialog("Default reminder", settings.defaultReminderMinutes, REMINDER_CHOICES, ::reminderLabel, { picker = null }) { v ->
             onChange { it.copy(defaultReminderMinutes = v) }; picker = null
-        }
-        SettingsPicker.COUNTRY -> CountryPickerDialog(countries, settings.holidayCountry, { picker = null }) { code ->
-            onChange { it.copy(holidayCountry = code) }; picker = null
         }
         SettingsPicker.CALENDARS -> CalendarsDialog(calendars, settings.hiddenCalendarIds, { picker = null }) { id, show ->
             onChange { s -> s.copy(hiddenCalendarIds = if (show) s.hiddenCalendarIds - id else s.hiddenCalendarIds + id) }
@@ -270,7 +364,7 @@ fun SettingsScreen(
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-private fun Section(title: String) {
+internal fun Section(title: String) {
     Row(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleLargeEmphasized, color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.width(14.dp))
@@ -490,77 +584,6 @@ private fun ShapeSwatch(name: String, color: Color, ring: Color, shape: Shape, s
         if (selected) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(22.dp))
     }
 }
-
-@Composable
-private fun CountryPickerDialog(
-    countries: List<Country>,
-    selected: String?,
-    onDismiss: () -> Unit,
-    onSelect: (String?) -> Unit,
-) {
-    var query by remember { mutableStateOf("") }
-    val filtered = remember(query, countries) {
-        if (query.isBlank()) countries
-        else countries.filter { it.name.contains(query, ignoreCase = true) || it.code.equals(query, ignoreCase = true) }
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Holiday country") },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        text = {
-            Column {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Outlined.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(10.dp))
-                    Box(Modifier.weight(1f)) {
-                        if (query.isEmpty()) Text("Search countries", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        BasicTextField(
-                            value = query, onValueChange = { query = it }, singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                    if (query.isBlank()) {
-                        item { RadioLine("Automatic (phone region)", selected == null) { onSelect(null) } }
-                    }
-                    items(filtered, key = { it.code }) { c ->
-                        RadioLine("${flag(c.code)}  ${c.name}", c.code == selected) { onSelect(c.code) }
-                    }
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun RadioLine(text: String, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Spacer(Modifier.width(8.dp))
-        Text(text, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-private fun flag(code: String): String =
-    if (code.length != 2) "" else code.uppercase().map { Character.toChars(0x1F1E6 + (it - 'A')) }.joinToString("") { String(it) }
 
 @Composable
 private fun CalendarsDialog(

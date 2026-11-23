@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import app.expressivecalendar.data.EventInstance
 import app.expressivecalendar.data.Holiday
 import app.expressivecalendar.data.HolidayKind
+import app.expressivecalendar.data.countryName
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -289,7 +290,7 @@ fun EventTile(
 
 /** Holidays use the tertiary family so they read as "not yours" at a glance. */
 @Composable
-fun HolidayTile(holiday: Holiday, countryName: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun HolidayTile(holiday: Holiday, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val public = holiday.kind == HolidayKind.PUBLIC
     val bg = if (public) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
     val fg = if (public) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurface
@@ -318,7 +319,7 @@ fun HolidayTile(holiday: Holiday, countryName: String, onClick: () -> Unit, modi
         Column(Modifier.weight(1f)) {
             Text(holiday.name, style = MaterialTheme.typography.titleMediumEmphasized, color = fg, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                (if (public) "Public holiday" else "Observance") + " · " + countryName,
+                (if (public) "Public holiday" else "Observance") + " · " + holiday.countries.joinToString { countryName(it) },
                 style = MaterialTheme.typography.bodyMedium,
                 color = fg.copy(alpha = .75f),
             )

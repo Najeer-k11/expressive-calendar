@@ -9,6 +9,25 @@
     <!-- Only used to fetch public holidays from date.nager.at, cached per country and year. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Event reminders: the calendar provider schedules them, but a calendar app has to show them. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Exact snooze alarms. USE_EXACT_ALARM is auto-granted for calendar apps on 13+; the
+         SCHEDULE_ variant is auto-granted on 12/12L. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+
+    <!-- To notice another calendar app (which shows its own reminders), so they don't arrive twice. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.EVENT_REMINDER" />
+            <data android:scheme="content" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="vnd.android.cursor.item/event" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -28,6 +47,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Sent by the calendar provider when a reminder is due; exempt from implicit-broadcast limits. -->
+        <receiver
+            android:name=".notify.ReminderReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.EVENT_REMINDER" />
+                <data android:scheme="content" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".notify.ReminderActionReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".widget.MonthWidgetProvider"

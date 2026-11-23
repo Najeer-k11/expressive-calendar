@@ -44,7 +44,6 @@ private const val AGENDA_DAYS = 180L
 fun AgendaScreen(
     events: Map<LocalDate, List<EventInstance>>,
     holidays: Map<LocalDate, List<Holiday>>,
-    countryName: String,
     onDayClick: (LocalDate) -> Unit,
     onEventClick: (EventInstance) -> Unit,
     onHolidayClick: (Holiday) -> Unit,
@@ -95,7 +94,6 @@ fun AgendaScreen(
                     isToday = day == today,
                     events = events[day].orEmpty(),
                     holidays = holidays[day].orEmpty(),
-                    countryName = countryName,
                     onDayClick = { onDayClick(day) },
                     onEventClick = onEventClick,
                     onHolidayClick = onHolidayClick,
@@ -113,7 +111,6 @@ private fun AgendaDay(
     isToday: Boolean,
     events: List<EventInstance>,
     holidays: List<Holiday>,
-    countryName: String,
     onDayClick: () -> Unit,
     onEventClick: (EventInstance) -> Unit,
     onHolidayClick: (Holiday) -> Unit,
@@ -153,7 +150,7 @@ private fun AgendaDay(
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            holidays.forEach { h -> HolidayTile(h, countryName, onClick = { onHolidayClick(h) }) }
+            holidays.forEach { h -> HolidayTile(h, onClick = { onHolidayClick(h) }) }
             events.forEach { e -> EventTile(e, day, onClick = { onEventClick(e) }) }
             if (events.isEmpty() && holidays.isEmpty()) {
                 EmptyDayCard("Nothing planned today", "Add event", onNewEvent)

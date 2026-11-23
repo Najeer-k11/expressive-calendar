@@ -45,7 +45,9 @@ Soft morphing shapes, frosted glass, variable type, and your events from the cal
 | 🗓️ **Three views** | **Month**, **Agenda** and **Day**, one tap apart on a floating glass dock |
 | 🔄 **Uses your existing calendars** | Reads and writes through Android's `CalendarContract`, so Google, Samsung and local calendars all sync through the accounts you already have. No new account, no cloud of its own |
 | ✏️ **Event editor** | Cancel/Save bottom sheet with date and time pills, repeat rules, reminders and a calendar picker |
-| 🎉 **Public holidays** | Fetched from [Nager.Date](https://date.nager.at) for any country and cached per country and year |
+| 🔔 **Reminder notifications** | Alerts when a reminder is due, with Snooze, even on phones with no other calendar app (e.g. GrapheneOS). Stays off automatically if Google or Samsung Calendar already shows them |
+| 🎉 **Public holidays** | For as many countries as you like, fetched from [Nager.Date](https://date.nager.at) and cached per country and year. A holiday shared by several countries shows once |
+| 💾 **Backup** | Export calendars to an `.ics` file and import one back, from this app or Google Calendar, Thunderbird, Etar… Repeating events, time zones and reminders carry over; re-importing never duplicates |
 | 🧩 **Home screen widget** | The month at a glance, with holidays and events |
 | 🎨 **10 colour themes** | Wallpaper-based dynamic colour plus 9 presets: *Concept, Violet, Coral, Ember, Citron, Forest, Lagoon, Azure, Fuchsia* |
 | 🌗 **Dark mode** | System, Light or Dark, with an optional pure-black AMOLED mode |
@@ -57,8 +59,10 @@ Soft morphing shapes, frosted glass, variable type, and your events from the cal
 - **Week starts on:** system default, Saturday, Sunday or Monday
 - **Default view:** Month, Agenda or Day
 - **Default reminder:** none, at start, or anywhere from 5 minutes to 1 week before
+- **Reminder notifications:** automatic (on unless another calendar app shows reminders), or forced on/off
 - **Week numbers:** on or off
-- **Holidays:** on or off, and which country (searchable picker with flags)
+- **Holidays:** on or off, and any number of countries (searchable, with flags), or automatic from the phone's region
+- **Backup:** import and export `.ics` files
 - **Calendars:** choose which of your device calendars to show
 
 ## 🔐 Permissions
@@ -66,6 +70,8 @@ Soft morphing shapes, frosted glass, variable type, and your events from the cal
 | Permission | Why |
 |---|---|
 | `READ_CALENDAR` / `WRITE_CALENDAR` | To show, create and edit events in your device calendars |
+| `POST_NOTIFICATIONS` | To show reminder notifications (asked for only when they're on) |
+| `USE_EXACT_ALARM` | So a 10-minute snooze rings after 10 minutes, not 17 |
 | `INTERNET` | Only to download public holiday lists from `date.nager.at` |
 
 There are no analytics, no ads and no trackers.

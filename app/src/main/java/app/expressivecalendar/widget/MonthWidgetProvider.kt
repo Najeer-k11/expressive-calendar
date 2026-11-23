@@ -113,7 +113,7 @@ class MonthWidgetProvider : AppWidgetProvider() {
         }.getOrDefault(emptySet())
         val holidays = if (!settings.showHolidays) emptyList() else {
             val repo = HolidayRepository(context)
-            (from.year..to.year).flatMap { repo.cachedHolidays(settings.effectiveCountry, it) }
+            settings.effectiveCountries.flatMap { cc -> (from.year..to.year).flatMap { repo.cachedHolidays(cc, it) } }
         }
         return Data(
             month, settings.weekStart.firstDay(), eventDays,

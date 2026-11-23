@@ -9,7 +9,7 @@
  @media (prefers-color-scheme:dark){body{background:#0e1415;color:#dde4e5}h1,h2{color:#97f0ff}a{color:#82d3e0}code{background:#1d2b2d}}
 </style></head><body>
 <h1>Privacy Policy — Expressive Calendar</h1>
-<p><em>Last updated: 19 November 2026</em></p>
+<p><em>Last updated: 23 November 2026</em></p>
 <p>Expressive Calendar ("the app") is an open-source calendar app for Android, published by Najeer-k11 ("we"). This policy explains what data the app handles and why. The short version: <strong>we do not collect, store or share any personal data.</strong> The app has no accounts, no servers of its own, no ads and no analytics.</p>
 <h2>Calendar data</h2>
 <p>The app shows, creates, edits and deletes events in calendars that are already on your device. It does this through Android's built-in calendar storage (<code>CalendarContract</code>), and only after you grant the <strong>Calendar</strong> permission (<code>READ_CALENDAR</code> / <code>WRITE_CALENDAR</code>).</p>
@@ -18,6 +18,8 @@
 <li>If a calendar belongs to an account such as Google, Samsung or Exchange, that account's own sync service may sync your changes. That sync is handled by the account provider under its own privacy policy, not by this app.</li>
 <li>You can revoke the Calendar permission at any time in Android Settings → Apps → Expressive Calendar → Permissions.</li>
 </ul>
+<h2>Reminder notifications</h2>
+<p>When an event's reminder is due, the app shows a notification with the event's title, time and location, if you allow the <strong>Notifications</strong> permission (<code>POST_NOTIFICATIONS</code>). It uses the alarm permission (<code>USE_EXACT_ALARM</code>) only to time the Snooze button. To avoid duplicate alerts, the app checks on your device whether another calendar app (such as Google Calendar) is installed. This check never leaves your device.</p>
 <h2>Public holidays (internet use)</h2>
 <p>The app uses the internet for one thing: downloading lists of public holidays for the country you choose. To do this it contacts one of these public services and tells it <strong>only which country (and, for Nager.Date, which year)</strong> you want holidays for:</p>
 <ul>
@@ -25,6 +27,8 @@
 <li><strong>Google Calendar public holiday feeds</strong> — calendar.google.com, used for countries Nager.Date does not cover (<a href="https://policies.google.com/privacy">Google Privacy Policy</a>)</li>
 </ul>
 <p>These requests contain no personal information, no calendar data and no identifiers. As with any internet request, the service you connect to can see your IP address. Holiday lists are cached on your device. You can turn holidays off in Settings, and then the app makes no network requests at all.</p>
+<h2>Backup files (import and export)</h2>
+<p>If you use Settings → Backup, the app writes your chosen calendars' events to an <code>.ics</code> file at a location <strong>you</strong> pick, or reads events from a file you pick, using Android's file picker. The app gets access only to that one file, and nothing is uploaded anywhere. Where the file goes afterwards (for example a cloud drive you chose) is up to you.</p>
 <h2>Settings stored on your device</h2>
 <p>Your preferences (theme, colours, first day of the week, chosen country, visible calendars, and so on) and the cached holiday lists are stored privately on your device. If you have turned on Android's device backup, Android may include these settings in your own Google backup. We never have access to them.</p>
 <h2>What we do not do</h2>

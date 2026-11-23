@@ -6,7 +6,10 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import app.expressivecalendar.data.CalendarBackup
 import app.expressivecalendar.data.CalendarRepository
+import app.expressivecalendar.data.IcsEvent
+import app.expressivecalendar.data.ImportResult
 import app.expressivecalendar.data.CalendarSettings
 import app.expressivecalendar.data.Country
 import app.expressivecalendar.data.DeviceCalendar
@@ -15,6 +18,9 @@ import app.expressivecalendar.data.EventInstance
 import app.expressivecalendar.data.Holiday
 import app.expressivecalendar.data.HolidayRepository
 import app.expressivecalendar.data.SettingsStore
+import app.expressivecalendar.data.countryName
+import app.expressivecalendar.data.mergeHolidays
+import app.expressivecalendar.notify.ReminderNotifications
 import app.expressivecalendar.widget.MonthWidgetProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -42,6 +48,7 @@ private data class Window(val from: LocalDate, val toExclusive: LocalDate)
 class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     private val settingsStore = SettingsStore(app)
     private val calendarsRepo = CalendarRepository(app)
+    private val backup = CalendarBackup(app)
     val holidaysRepo = HolidayRepository(app)
 
     val settings: StateFlow<CalendarSettings> = settingsStore.settings
@@ -52,6 +59,17 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _hasPermission = MutableStateFlow(checkPermission())
     val hasPermission = _hasPermission.asStateFlow()
+
+    private val _notificationsAllowed = MutableStateFlow(ReminderNotifications.canPost(app))
+    /** Whether the system lets us post notifications (permission + app-level switch). */
+    val notificationsAllowed = _notificationsAllowed.asStateFlow()
+
+    /** Another installed app that already shows calendar reminders, if any. */
+    val otherReminderApp: String? by lazy { ReminderNotifications.otherReminderApp(app) }
+
+    /** An event occurrence to open, from tapping a reminder notification: (eventId, beginMillis). */
+    private val _pendingOpen = MutableStateFlow<Pair<Long, Long>?>(null)
+    val pendingOpen = _pendingOpen.asStateFlow()
 
     private val _visibleMonth = MutableStateFlow(YearMonth.now())
     val visibleMonth = _visibleMonth.asStateFlow()
@@ -94,18 +112,20 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     val holidays: StateFlow<Map<LocalDate, List<Holiday>>> =
         combine(
             window,
-            settings.map { it.showHolidays to it.effectiveCountry }.distinctUntilChanged(),
+            settings.map { it.showHolidays to it.effectiveCountries }.distinctUntilChanged(),
             refreshTick,
-        ) { w, (show, cc), _ -> Triple(w, show, cc) }
-            .mapLatest { (w, show, cc) ->
+        ) { w, (show, ccs), _ -> Triple(w, show, ccs) }
+            .mapLatest { (w, show, ccs) ->
                 if (!show) return@mapLatest emptyMap()
                 val years = (w.from.year..w.toExclusive.year).toList()
-                val all = years.map { y -> viewModelScope.async { holidaysRepo.holidays(cc, y) } }
-                    .awaitAll().flatten()
-                _holidayStatus.value = if (all.isEmpty()) {
-                    "No holidays found for ${holidaysRepo.countryName(cc)}. Check your connection."
+                val perCountry = ccs.associateWith { cc ->
+                    years.map { y -> viewModelScope.async { holidaysRepo.holidays(cc, y) } }
+                }.mapValues { (_, jobs) -> jobs.awaitAll().flatten() }
+                val missing = perCountry.filterValues { it.isEmpty() }.keys
+                _holidayStatus.value = if (missing.isNotEmpty()) {
+                    "No holidays found for ${missing.joinToString { countryName(it) }}. Check your connection."
                 } else null
-                all.groupBy { it.date }
+                mergeHolidays(perCountry.values.flatten()).groupBy { it.date }
             }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     val countries: List<Country> by lazy { holidaysRepo.countries() }
@@ -139,6 +159,20 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onPermissionResult() {
         _hasPermission.value = checkPermission()
+        _notificationsAllowed.value = ReminderNotifications.canPost(getApplication())
+    }
+
+    fun notificationsEnabled(s: CalendarSettings): Boolean =
+        s.eventNotifications ?: (otherReminderApp == null)
+
+    fun openEvent(eventId: Long, beginMillis: Long, allDay: Boolean) {
+        val zone = if (allDay) java.time.ZoneOffset.UTC else java.time.ZoneId.systemDefault()
+        select(java.time.Instant.ofEpochMilli(beginMillis).atZone(zone).toLocalDate())
+        _pendingOpen.value = eventId to beginMillis
+    }
+
+    fun consumePendingOpen() {
+        _pendingOpen.value = null
     }
 
     fun select(date: LocalDate) {
@@ -184,6 +218,19 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             MonthWidgetProvider.refresh(getApplication())
         }
     }
+
+    suspend fun exportIcs(calendarIds: Set<Long>, to: android.net.Uri): Result<Int> =
+        runCatching { backup.export(calendarIds, to) }
+            .onFailure { android.util.Log.e("ExpressiveCalendar", "export failed", it) }
+
+    suspend fun readIcs(from: android.net.Uri): Result<List<IcsEvent>> =
+        runCatching { backup.read(from) }
+            .onFailure { android.util.Log.e("ExpressiveCalendar", "read failed", it) }
+
+    suspend fun importIcs(events: List<IcsEvent>, calendarId: Long): Result<ImportResult> =
+        runCatching { backup.import(events, calendarId) }
+            .onFailure { android.util.Log.e("ExpressiveCalendar", "import failed", it) }
+            .also { MonthWidgetProvider.refresh(getApplication()) }
 
     fun createLocalCalendar() {
         viewModelScope.launch {

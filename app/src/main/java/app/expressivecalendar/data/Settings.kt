@@ -24,13 +24,16 @@ data class CalendarSettings(
     /** Minutes before start; -1 means no reminder. */
     val defaultReminderMinutes: Int = 10,
     val showHolidays: Boolean = true,
-    /** ISO 3166-1 alpha-2, or null to follow the device locale. */
-    val holidayCountry: String? = null,
+    /** ISO 3166-1 alpha-2 codes; empty to follow the device locale. */
+    val holidayCountries: Set<String> = emptySet(),
     val hiddenCalendarIds: Set<Long> = emptySet(),
     val showWeekNumbers: Boolean = false,
+    /** Show reminder notifications ourselves; null = automatic (on unless another calendar app does). */
+    val eventNotifications: Boolean? = null,
 ) {
-    val effectiveCountry: String
-        get() = holidayCountry ?: Locale.getDefault().country.ifBlank { "US" }
+    /** The countries to show holidays for, alphabetical by display name. */
+    val effectiveCountries: List<String>
+        get() = holidayCountries.sortedBy { countryName(it) }.ifEmpty { listOf(Locale.getDefault().country.ifBlank { "US" }) }
 }
 
 data class ThemeSettings(
@@ -84,9 +87,12 @@ class SettingsStore(private val context: Context) {
         val view = stringPreferencesKey("default_view")
         val reminder = intPreferencesKey("default_reminder")
         val showHolidays = booleanPreferencesKey("show_holidays")
-        val country = stringPreferencesKey("holiday_country")
+        /** Pre-0.1.2 single-country setting; read once as a fallback, then replaced. */
+        val legacyCountry = stringPreferencesKey("holiday_country")
+        val countries = stringSetPreferencesKey("holiday_countries")
         val hidden = stringSetPreferencesKey("hidden_calendars")
         val weekNumbers = booleanPreferencesKey("week_numbers")
+        val notifications = booleanPreferencesKey("event_notifications")
     }
 
     val settings: Flow<CalendarSettings> = context.store.data.map { p ->
@@ -101,9 +107,10 @@ class SettingsStore(private val context: Context) {
             defaultView = p[K.view].enumOr(CalendarView.MONTH),
             defaultReminderMinutes = p[K.reminder] ?: 10,
             showHolidays = p[K.showHolidays] ?: true,
-            holidayCountry = p[K.country],
+            holidayCountries = p[K.countries] ?: p[K.legacyCountry]?.let { setOf(it) } ?: emptySet(),
             hiddenCalendarIds = p[K.hidden].orEmpty().mapNotNull { it.toLongOrNull() }.toSet(),
             showWeekNumbers = p[K.weekNumbers] ?: false,
+            eventNotifications = p[K.notifications],
         )
     }
 
@@ -117,9 +124,11 @@ class SettingsStore(private val context: Context) {
             p[K.view] = s.defaultView.name
             p[K.reminder] = s.defaultReminderMinutes
             p[K.showHolidays] = s.showHolidays
-            if (s.holidayCountry != null) p[K.country] = s.holidayCountry else p.remove(K.country)
+            p[K.countries] = s.holidayCountries
+            p.remove(K.legacyCountry)
             p[K.hidden] = s.hiddenCalendarIds.map { it.toString() }.toSet()
             p[K.weekNumbers] = s.showWeekNumbers
+            if (s.eventNotifications != null) p[K.notifications] = s.eventNotifications else p.remove(K.notifications)
         }
     }
 }

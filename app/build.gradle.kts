@@ -118,4 +118,7 @@ dependencies {
     implementation(libs.androidx.graphics.shapes)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.test)
 }

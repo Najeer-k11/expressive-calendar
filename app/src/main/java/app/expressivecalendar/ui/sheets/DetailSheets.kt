@@ -49,6 +49,8 @@ import app.expressivecalendar.data.DeviceCalendar
 import app.expressivecalendar.data.EventInstance
 import app.expressivecalendar.data.Holiday
 import app.expressivecalendar.data.HolidayKind
+import app.expressivecalendar.data.countryName
+import app.expressivecalendar.data.flagEmoji
 import app.expressivecalendar.ui.SettingIcon
 import app.expressivecalendar.ui.SheetHeaderButton
 import app.expressivecalendar.ui.formatLongDate
@@ -160,7 +162,7 @@ fun EventDetailSheet(
 }
 
 @Composable
-fun HolidayDetailSheet(holiday: Holiday, countryName: String, onDismiss: () -> Unit) {
+fun HolidayDetailSheet(holiday: Holiday, onDismiss: () -> Unit) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val public = holiday.kind == HolidayKind.PUBLIC
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, shape = SheetShape) {
@@ -192,7 +194,7 @@ fun HolidayDetailSheet(holiday: Holiday, countryName: String, onDismiss: () -> U
             Spacer(Modifier.height(18.dp))
             DetailGroup {
                 DetailRow(Icons.Outlined.Schedule, formatLongDate(holiday.date))
-                DetailRow(Icons.Outlined.Public, countryName)
+                DetailRow(Icons.Outlined.Public, holiday.countries.joinToString("\n") { "${flagEmoji(it)}  ${countryName(it)}" })
                 DetailRow(Icons.Outlined.Celebration, if (public) "Public holiday" else "Observance")
             }
             Spacer(Modifier.height(12.dp))

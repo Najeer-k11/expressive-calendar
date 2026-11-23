@@ -22,9 +22,30 @@ data class Holiday(
     val localName: String,
     val kind: HolidayKind,
     val countryCode: String,
+    /** Every selected country that observes this holiday on this day (see [mergeHolidays]). */
+    val countries: List<String> = listOf(countryCode),
 )
 
 data class Country(val code: String, val name: String)
+
+fun countryName(code: String): String =
+    Locale("", code).getDisplayCountry(Locale.getDefault()).ifBlank { code }
+
+/** Regional-indicator flag emoji for an ISO country code. */
+fun flagEmoji(code: String): String =
+    if (code.length != 2) "" else code.uppercase().map { Character.toChars(0x1F1E6 + (it - 'A')) }.joinToString("") { String(it) }
+
+/**
+ * Collapses the same holiday shared by several countries on the same day (Christmas in the UK
+ * and the US) into one entry listing them all. Public in any country wins over observance.
+ */
+fun mergeHolidays(list: List<Holiday>): List<Holiday> =
+    list.groupBy { it.date to it.name.trim().lowercase() }.values.map { same ->
+        same.first().copy(
+            kind = if (same.any { it.kind == HolidayKind.PUBLIC }) HolidayKind.PUBLIC else HolidayKind.OBSERVANCE,
+            countries = same.flatMap { it.countries }.distinct(),
+        )
+    }.sortedBy { it.date }
 
 /**
  * Public holidays for any country, fetched once per country-year and cached on disk.
@@ -43,9 +64,6 @@ class HolidayRepository(context: Context) {
         .map { Country(it, Locale("", it).getDisplayCountry(Locale.getDefault())) }
         .filter { it.name.isNotBlank() && it.name != it.code }
         .sortedBy { it.name }
-
-    fun countryName(code: String): String =
-        Locale("", code).getDisplayCountry(Locale.getDefault()).ifBlank { code }
 
     suspend fun holidays(country: String, year: Int, forceRefresh: Boolean = false): List<Holiday> =
         lock.withLock {
